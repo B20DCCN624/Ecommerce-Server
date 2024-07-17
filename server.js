@@ -2,11 +2,18 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser'); 
+const jwt = require('jsonwebtoken');
+const cookies = require('cookie-parser');
 const app = express();
 const port = 3000;
 const router = express.Router()
 
-app.use(cors());
+const corsOptions = {
+    origin: 'http://localhost:4200',
+    credentials: true,
+};
+app.use(cors(corsOptions));
+app.use(cookies());
 app.use(bodyParser.json()); // Sử dụng body-parser để phân tích cú pháp dữ liệu JSON
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -49,6 +56,7 @@ const CartModel = mongoose.model("carts", CartSchema)
 const LoginSchema = new mongoose.Schema({
     username: String,
     password: String,
+    role: String,
 })
 
 const LoginModel = mongoose.model("logins", LoginSchema)
@@ -59,6 +67,7 @@ const LoginModel = mongoose.model("logins", LoginSchema)
 app.post('/register', async(req, res) => {
     var username = req.body.username
     var password = req.body.password
+    var role = req.body.role
 
     LoginModel.findOne({
         username: username
@@ -69,7 +78,8 @@ app.post('/register', async(req, res) => {
         } else {
             return LoginModel.create({
                 username: username,
-                password: password
+                password: password,
+                role: role,
             })
         }
     })
@@ -81,8 +91,8 @@ app.post('/register', async(req, res) => {
     })
 })
 
-//Api đăng nhập 
-app.post('/login', (req, res) => {
+//Api đăng nhập
+app.post('/login', (req, res, next) => {
     var username = req.body.username
     var password = req.body.password
 
@@ -92,7 +102,15 @@ app.post('/login', (req, res) => {
     })
     .then(data => {
         if(data) {
-            res.json('Dang nhap thanh cong')
+            var token = jwt.sign({
+                _id: data._id,
+                role: data.role
+            }, 'mk');
+            res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'lax' });
+            res.json({
+                message:'Dang nhap thanh cong',
+                token: token
+            })
         } else {
             res.status(400).json('Account khong dung')
         }
@@ -101,6 +119,51 @@ app.post('/login', (req, res) => {
         res.status(500).json('Co loi ben server')
     })
 })
+
+var checkLogin = (req, res, next) => {
+    try {
+        var token = req.cookies.token;
+        if (!token) {
+            return res.status(401).json('Chưa đăng nhập');
+        }
+        var idUser = jwt.verify(token, 'mk');
+        LoginModel.findOne({
+            _id: idUser
+        })
+        .then( data => {
+            if(data) {
+                // console.log(data);
+                req.data = data
+                next()
+            } else {
+                res.json('NOT PERMISSION')
+            }
+        })
+        .catch(err => {
+            res.status(500).json('Lỗi server');
+        })
+    } catch(err) {
+        res.status(500).json('Token khong hop le')
+    }
+}
+
+var checkUser = (req, res, next) => {
+    var role = req.data.role
+    if(role === 'admin' || role === 'user') {
+        next()
+    } else{
+        res.json('NOT PERMISSION')
+    } 
+}
+
+var checkAdmin = (req, res, next) => {
+    var role = req.data.role
+    if(role === 'admin') {
+        next()
+    } else {
+        return res.json('NOT PERMISSION')
+    }
+}
 
 
 //Api Cart
@@ -113,7 +176,7 @@ app.post('/addtocart', async(req, res) => {
 })
 
 //getAll
-app.get('/getAllCart', async(req, res) => {
+app.get('/getAllCart', checkLogin, async(req, res) => {
     const cartItem = await CartModel.find({})
     res.json(cartItem)
 })
@@ -126,19 +189,19 @@ app.delete('/deleteItem/:id', async(req, res) => {
 
 
 // Api Product
-app.get('/', async(req, res) => {
+app.get('/home', checkLogin, checkUser, async(req, res) => {
     const products = await ProductModel.find({})
     res.json(products);
 })
 
 // Lay ra 4 san pham co quantity thap nhat
-app.get('/top-seller', async(req, res) => {
+app.get('/top-seller',checkLogin, async(req, res) => {
     // Sort tang dan
     const products = await ProductModel.find().sort({quantity:1}).limit(4);
     res.json(products);
 })
 
-app.post('/add', async(req, res) => {
+app.post('/add', checkLogin,checkAdmin, async(req, res) => {
     // Không bao gồm _id trong dữ liệu yêu cầu
     const { _id, ...productData } = req.body;
     const product = await ProductModel.create(productData);
