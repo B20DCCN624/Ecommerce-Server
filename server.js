@@ -201,13 +201,6 @@ app.get('/top-seller',checkLogin, async(req, res) => {
     res.json(products);
 })
 
-app.post('/add', checkLogin,checkAdmin, async(req, res) => {
-    // Không bao gồm _id trong dữ liệu yêu cầu
-    const { _id, ...productData } = req.body;
-    const product = await ProductModel.create(productData);
-    res.json(product);
-})
-
 app.get('/searchByName', async(req, res) => {
     const name = req.query.name;
     // Tìm kiếm sản phẩm dựa trên tên (không phân biệt chữ hoa thường)
@@ -215,7 +208,33 @@ app.get('/searchByName', async(req, res) => {
     res.json(products);
 })
 
-app.get('/:id', async(req, res) => {
+//admin
+app.post('/add', checkLogin, checkAdmin, async(req, res) => {
+    // Không bao gồm _id trong dữ liệu yêu cầu
+    const { _id, ...productData } = req.body;
+    const product = await ProductModel.create(productData);
+    res.json(product);
+})
+
+//delete 
+app.delete('/delete/:id', async(req, res) => {  
+    const product = await ProductModel.findByIdAndDelete(req.params.id, req.body)
+    res.json("Product deleted successfully");
+})
+
+//update
+app.put('/update/:id', async(req, res) => {
+    const product = await ProductModel.findByIdAndUpdate(req.params.id, req.body)
+    return json(product);    
+})        
+
+//edit
+app.get('/edit/:id', async(req, res) => {
+    const product = await ProductModel.findById(req.params.id);
+    res.json(product);
+})
+
+app.get('/detail/:id', async(req, res) => {
     const product = await ProductModel.findById(req.params.id);
     res.json(product);
 })
