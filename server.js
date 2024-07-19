@@ -61,6 +61,24 @@ const LoginSchema = new mongoose.Schema({
 
 const LoginModel = mongoose.model("logins", LoginSchema)
 
+//Table order
+const OrderSchema = new mongoose.Schema({
+    fullname: String,
+    address: String,
+    city: String,
+    phone: String,
+    email: String,
+    total: Number,
+})
+
+const OrderModel = mongoose.model("orders", OrderSchema)
+
+//Api order
+app.post('/order', async(req, res) => {
+    const order = OrderModel.create(req.body)
+    res.json(order)
+})
+
 //Api Login
 
 //Register
@@ -123,9 +141,6 @@ app.post('/login', (req, res, next) => {
 var checkLogin = (req, res, next) => {
     try {
         var token = req.cookies.token;
-        if (!token) {
-            return res.status(401).json('Chưa đăng nhập');
-        }
         var idUser = jwt.verify(token, 'mk');
         LoginModel.findOne({
             _id: idUser
@@ -225,7 +240,7 @@ app.delete('/delete/:id', async(req, res) => {
 //update
 app.put('/update/:id', async(req, res) => {
     const product = await ProductModel.findByIdAndUpdate(req.params.id, req.body)
-    return json(product);    
+    res.json(product);    
 })        
 
 //edit
