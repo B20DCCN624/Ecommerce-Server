@@ -75,7 +75,12 @@ const OrderModel = mongoose.model("orders", OrderSchema)
 
 //Api order
 app.post('/order', async(req, res) => {
-    const order = OrderModel.create(req.body)
+    const order = await OrderModel.create(req.body)
+    res.json(order)
+})
+
+app.get('/getAllOrder', async(req, res) => {
+    const order = await OrderModel.find({})
     res.json(order)
 })
 
@@ -180,6 +185,12 @@ var checkAdmin = (req, res, next) => {
     }
 }
 
+//getAllAccount 
+app.get('/getAllAccount', async(req, res) => {
+    const login = await LoginModel.find({})
+    res.json(login)
+})
+
 
 //Api Cart
 //add data
@@ -200,6 +211,12 @@ app.get('/getAllCart', checkLogin, async(req, res) => {
 app.delete('/deleteItem/:id', async(req, res) => {
     const cartItem = await CartModel.findByIdAndDelete(req.params.id, req.body);
     res.json(cartItem);
+})
+
+//delete all data
+app.delete('/clearCart', async(req, res) => {
+    const result = await CartModel.deleteMany({});
+    res.json({ message: 'All cart items have been cleared', result });
 })
 
 
