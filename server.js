@@ -191,6 +191,17 @@ app.get('/getAllAccount', async(req, res) => {
     res.json(login)
 })
 
+// API lấy thông tin tài khoản hiện tại
+app.get('/currentAccount', checkLogin, async (req, res) => {
+    const user = req.data; 
+    res.json(user);
+});
+
+app.delete('/deleteAccount/:id', async(req, res) => {
+    const account = await LoginModel.findByIdAndDelete(req.params.id, req.body);
+    res.json(account)
+})
+
 
 //Api Cart
 //add data
@@ -208,7 +219,7 @@ app.get('/getAllCart', checkLogin, async(req, res) => {
 })
 
 //deleteItem - Api Cart
-app.delete('/deleteItem/:id', async(req, res) => {
+app.delete('/deleteItem/:id', checkLogin, checkUser, async(req, res) => {
     const cartItem = await CartModel.findByIdAndDelete(req.params.id, req.body);
     res.json(cartItem);
 })
@@ -221,7 +232,7 @@ app.delete('/clearCart', async(req, res) => {
 
 
 // Api Product
-app.get('/home', checkLogin, checkUser, async(req, res) => {
+app.get('/home', async(req, res) => {
     const products = await ProductModel.find({})
     res.json(products);
 })
@@ -229,7 +240,7 @@ app.get('/home', checkLogin, checkUser, async(req, res) => {
 // Lay ra 4 san pham co quantity thap nhat
 app.get('/top-seller',checkLogin, async(req, res) => {
     // Sort tang dan
-    const products = await ProductModel.find().sort({quantity:1}).limit(4);
+    const products = await ProductModel.find().sort({quantity:1}).limit(5);
     res.json(products);
 })
 
