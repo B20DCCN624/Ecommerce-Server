@@ -218,6 +218,18 @@ app.get('/getAllCart', checkLogin, async(req, res) => {
     res.json(cartItem)
 })
 
+//update cart
+app.put('/updateCart', async(req, res) => {
+    const {_id, quantity} = req.body;
+
+    const cartItem = await CartModel.findByIdAndUpdate(
+        _id,
+        { quantity },
+        { new:true },
+    );
+    res.json(cartItem);
+})
+
 //deleteItem - Api Cart
 app.delete('/deleteItem/:id', checkLogin, checkUser, async(req, res) => {
     const cartItem = await CartModel.findByIdAndDelete(req.params.id, req.body);
