@@ -61,6 +61,16 @@ const LoginSchema = new mongoose.Schema({
 
 const LoginModel = mongoose.model("logins", LoginSchema)
 
+//Table OrderItem 
+const OrderItemSchema = new mongoose.Schema( {
+    id: String,
+    name: String,
+    price: Number,
+    image: String,
+})
+
+const OrderItemModel = mongoose.model("orderItems", OrderItemSchema);
+
 //Table order
 const OrderSchema = new mongoose.Schema({
     fullname: String,
@@ -73,6 +83,7 @@ const OrderSchema = new mongoose.Schema({
 
 const OrderModel = mongoose.model("orders", OrderSchema)
 
+
 //Api order
 app.post('/order', async(req, res) => {
     const order = await OrderModel.create(req.body)
@@ -82,6 +93,20 @@ app.post('/order', async(req, res) => {
 app.get('/getAllOrder', async(req, res) => {
     const order = await OrderModel.find({})
     res.json(order)
+})
+
+//Api orderItem
+app.post('/addtoorder', async(req, res) => {
+    // Không bao gồm _id trong dữ liệu yêu cầu
+    const { _id, ...orderData } = req.body;
+    const orderItem = await OrderItemModel.create(orderData);
+    res.json(orderItem);
+})
+
+//getAll
+app.get('/getAllOrderItem', async(req, res) => {
+    const orderItem = await OrderItemModel.find({})
+    res.json(orderItem)
 })
 
 //Api Login
@@ -231,7 +256,7 @@ app.put('/updateCart', async(req, res) => {
 })
 
 //deleteItem - Api Cart
-app.delete('/deleteItem/:id', checkLogin, checkUser, async(req, res) => {
+app.delete('/deleteItem/:id', async(req, res) => {
     const cartItem = await CartModel.findByIdAndDelete(req.params.id, req.body);
     res.json(cartItem);
 })
