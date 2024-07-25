@@ -14,7 +14,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(cookies());
-app.use(bodyParser.json()); // Sử dụng body-parser để phân tích cú pháp dữ liệu JSON
+app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true }));
 
 //Connect Db
@@ -43,6 +43,7 @@ const ProductModel = mongoose.model("products", ProductSchema)
 
 // Table Cart
 const CartSchema = new mongoose.Schema({
+    id: String,
     name: String,
     price: Number,
     image: String,
@@ -83,6 +84,25 @@ const OrderSchema = new mongoose.Schema({
 
 const OrderModel = mongoose.model("orders", OrderSchema)
 
+//Table Review 
+const ReviewSchema = new mongoose.Schema({
+    name: String,
+    image: String,
+    comment: String,
+})
+
+const ReviewModel = mongoose.model("reviews", ReviewSchema)
+
+//Api review
+app.post('/review', async(req, res) => {
+    const review = await ReviewModel.create(req.body)
+    res.json(review)
+})
+
+app.get('/getAllReview', async(req, res) => {
+    const review = await ReviewModel.find({})
+    res.json(review)
+})
 
 //Api order
 app.post('/order', async(req, res) => {
@@ -98,10 +118,22 @@ app.get('/getAllOrder', async(req, res) => {
 //Api orderItem
 app.post('/addtoorder', async(req, res) => {
     // Không bao gồm _id trong dữ liệu yêu cầu
-    const { _id, ...orderData } = req.body;
-    const orderItem = await OrderItemModel.create(orderData);
+    const { id, ...orderData } = req.body;
+
+    const existingItem = await OrderItemModel.findOne({ id: id });
+    if (existingItem) {
+        return res.status(400).json({ message: 'Item with this _id already exists in the order.' });
+    }
+    const orderItem = await OrderItemModel.create({ id, ...orderData });
     res.json(orderItem);
 })
+
+// Api orderItem
+app.get('/getOrderItemById/:id', async (req, res) => {
+    const { id } = req.params;
+    const orderItem = await OrderItemModel.findOne({ id: id });
+    res.json(orderItem); 
+});
 
 //getAll
 app.get('/getAllOrderItem', async(req, res) => {
@@ -232,13 +264,35 @@ app.delete('/deleteAccount/:id', async(req, res) => {
 //add data
 app.post('/addtocart', async(req, res) => {
     // Không bao gồm _id trong dữ liệu yêu cầu
-    const { _id, ...cartData } = req.body;
-    const cartItem = await CartModel.create(cartData);
+    const { _id, id, ...cartData } = req.body;
+    const existingCartItem = await CartModel.findOne({id: id});
+    if(existingCartItem) {
+        existingCartItem.quantity += cartData.quantity;
+        existingCartItem.total = existingCartItem.price * existingCartItem.quantity;
+        await existingCartItem.save();
+        return res.json(existingCartItem)
+    } else {
+        const cartItem = await CartModel.create({id, ...cartData});
+        res.json(cartItem);
+    }
+})
+
+app.get('/getCartItemById/:id', async(req, res) => {
+    const { id } = req.params
+    const cartItem = await CartModel.findOne({id: id})
+    res.json(cartItem)
+})
+
+app.put('/updateCartItem/:id', async(req, res) => {
+    const { id } = req.params
+    const cartData = req.body
+
+    const cartItem = await CartModel.findOneAndUpdate({ id: id }, cartData, { new: true });
     res.json(cartItem);
 })
 
 //getAll
-app.get('/getAllCart', checkLogin, async(req, res) => {
+app.get('/getAllCart', async(req, res) => {
     const cartItem = await CartModel.find({})
     res.json(cartItem)
 })
@@ -286,6 +340,18 @@ app.get('/searchByName', async(req, res) => {
     // Tìm kiếm sản phẩm dựa trên tên (không phân biệt chữ hoa thường)
     const products = await ProductModel.find({ name: { $regex: name, $options: 'i' } });
     res.json(products);
+})
+
+//update quantity product
+app.put('/updateProductQuantity', async(req, res) => {
+    const cartItems = req.body;
+    for(const item of cartItems) {
+        const product = await ProductModel.findById(item.id);
+        if(product) {
+            product.quantity -= item.quantity;
+            await product.save();
+        }
+    }
 })
 
 //admin
