@@ -35,7 +35,8 @@ const ProductSchema = new mongoose.Schema({
     description: String,
     image: String,
     quantity: Number,
-    category: String
+    category: String,
+    sold: {type: Number, default: 0}
 })
 
 const ProductModel = mongoose.model("products", ProductSchema)
@@ -118,7 +119,7 @@ app.get('/getAllOrder', async(req, res) => {
 //Api orderItem
 app.post('/addtoorder', async(req, res) => {
     // Không bao gồm _id trong dữ liệu yêu cầu
-    const { id, ...orderData } = req.body;
+    const { _id, id, ...orderData } = req.body;
 
     const existingItem = await OrderItemModel.findOne({ id: id });
     if (existingItem) {
@@ -342,13 +343,14 @@ app.get('/searchByName', async(req, res) => {
     res.json(products);
 })
 
-//update quantity product
+//update quantity product, sold product
 app.put('/updateProductQuantity', async(req, res) => {
     const cartItems = req.body;
     for(const item of cartItems) {
         const product = await ProductModel.findById(item.id);
         if(product) {
             product.quantity -= item.quantity;
+            product.sold += item.quantity;
             await product.save();
         }
     }
